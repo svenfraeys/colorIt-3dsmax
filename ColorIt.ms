@@ -1,42 +1,92 @@
+/*
+Color it
+all rights reserved to sven fraeys
+*/
 
 struct colorPainter_system(
-	
+	-- main system to apply colors
 	fn GetMaterial _node _color=(
+		-- return material of the color
+		
+		-- check if material already exists
 		if(classof _node.material == multimaterial)then(
 			for mat in _node.material.materiallist do(
 				if(mat.diffusecolor == _color)then(
+					-- return the existing material
 					return mat
 				)
 			)
 		)
+		
+		-- create a material with given color
 		mat = standardmaterial()
 		mat.name = _node.name + "_Color"+(_color as string)
 		mat.diffuseColor = _color
 		return mat
 	),
 	fn ColorIt _node _colorValue=(
+		-- apply a color to the given node and
+		print("_node")
+		print(_node)
+		-- if the baseObject is an editable poly
+		if(classof _node == PolyMeshObject)then(
+			selectedFaces = _node.edit_poly.getSelection #Face
+			--print("selectedFaces")
+			--print(selectedFaces)
+			
+			if ( (selectedFaces as array).count == 0 ) then(
+				return false
+			)
+			
+			
+			modPanel.setCurrentObject _node.baseObject
+			subobjectlevel = 4
+			--selectedFaces = _node.baseObject.SetSelection #Face #{}
+			selectedFaces = polyop.setFaceSelection _node.baseObject selectedFaces
+			_node.material = GetMaterial _node _colorValue
+			subobjectlevel = 0
+			modPanel.setCurrentObject _node.edit_poly
+			subobjectlevel = 4
+			return true
+			
+			--return true
+		)
+		
+		-- if baseObject is undefined apply a general material
 		if(_node.baseObject == undefined)then(
 			_node.material = GetMaterial _node _colorValue
 			return true
 		)
+		
+		-- if the baseObject is an editable poly
 		if(classof _node.baseObject != Editable_Poly)then(
 			_node.material = GetMaterial _node _colorValue
 			return true
 		)
 		
+		
+		
+		-- if no faces are selected do not do anything
 		if( ( (_node.baseObject.GetSelection #Face) as array).count == 0 and subobjectlevel != 0)then(
 			return false
 		)
+		
+		-- apply material
 		mat = GetMaterial _node _colorValue
 		_node.material = mat
 	),
+	
+	
 	fn Edit _node=(
+		-- go to face mode --
 		max modify mode
 		modPanel.setCurrentObject _node.baseObject
 		subobjectlevel = 4
 	),
 	fn GetColor _material _id=(
--- 		show _material
+		/* return the color of a given material and id for multimaterials 
+		*/
+ 		-- show _material --
 		difColor = color 115 115 115
 		if(classof _material == Multimaterial)then(
 -- 			print "deesss"
@@ -64,6 +114,8 @@ struct colorPainter_system(
 		difColor
 	),
 	fn AsDataObj _strVal=(
+		/* return as data object to transfer
+		*/
 		dataObj = filterstring _strVal ";"
 		matId = execute(dataObj[1])
 		
@@ -85,6 +137,8 @@ struct colorPainter_system(
 		return dataObjVal
 	),
 	fn ApplyColorDataObject _node _dataObjArr=(
+		/*apply the given data object
+		*/
 		print "ApplyColorDataObject"
 		matObj = multimaterial()
 		matObj.name = _node.name as string
@@ -119,6 +173,8 @@ struct colorPainter_system(
 		_node.material = matObj
 	),
 	fn AsDataString _dataObj=(
+		/*return the whole setup as string
+		*/
 		matId = _dataObj[1]
 		
 		colorVal = _dataObj[2]
@@ -133,6 +189,8 @@ struct colorPainter_system(
 		strVal
 	),
 	fn Import _node _iniFile=(
+		/*apply iniFile data on the node
+		*/
 		if(doesfileexist _iniFile == false)then(
 			return false
 		)
@@ -179,12 +237,16 @@ struct colorPainter_system(
 		
 	),
 	fn GetBaseColor _node=(
+		/*return the main color on the object
+		*/
 		if(classof _node.material == standardmaterial)then(
 			return _node.material.diffuse
 		)
 		return _node.wirecolor
 	),
 	fn Export _node _iniFile=(
+		/*export node to ini
+		*/
 		print "export"
 		print _node.name
 		
@@ -234,6 +296,7 @@ struct colorPainter_system(
 
 -- painter.Color $ (color 0 255 0)
 
+-- delete interface if already exists
 try(destroydialog colorPainter_rollout)catch()
 global colorPainter_rollout_pos
 
@@ -242,6 +305,8 @@ rollout colorPainter_rollout ""(
 )
 
 rcmenu colorPain_MainMenu(
+	--main menu in colorIt
+	--
 	subMenu  "File"(
 		menuItem mi_Save "Save Colors Of Selected Objects..."
 		menuItem mi_Load "Load Colors In Selected Objects..."
@@ -277,6 +342,7 @@ rcmenu colorPain_MainMenu(
 )
 
 rcmenu colorPaint_RightClickMenu(
+	--context menu when right clicking on image
 	menuitem mi_Browse "Browse Background..."
 	menuitem mi_ResetBackground "Reset Background"
 	on mi_Browse picked do(
@@ -289,6 +355,7 @@ rcmenu colorPaint_RightClickMenu(
 )
 
 rollout colorPainter_rollout "Color It !" width:388 height:440(
+	--main interface
 	--button btn_Edit "Edit" 
 	colorpicker color_Color "" height:30  across:4
 	button btn_Color "Fill" width:50 height:30 offset:[-50,0]
@@ -460,6 +527,8 @@ rollout colorPainter_rollout "Color It !" width:388 height:440(
 		colorPainter_rollout_pos = getdialogpos colorPainter_rollout 
 	)
 )
+
+-- make the interface
 createdialog colorPainter_rollout menu:colorPain_MainMenu
 
 -- colorPainter_rollout.color_Color.changed (color 0 255 0)
